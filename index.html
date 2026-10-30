@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
+    <title>TWC Labs Community Health Outreach PWA</title>
+    <meta name="description" content="NDPA & NDHA compliant multi-hospital offline clinical screening PWA with Google Apps Script backend." />
+    
+    <!-- PWA & Mobile Web App Meta -->
+    <meta name="theme-color" content="#005F73" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="TWC Outreach" />
+
+    <!-- Icons & Manifest -->
+    <link rel="icon" type="image/png" href="./favicon.png" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+    <link rel="manifest" href="./manifest.json" />
+
+    <style>
+      :root {
+        --teal-deep: #003844;
+        --teal-primary: #005F73;
+        --teal-light: #0A9396;
+        --mint: #94D2BD;
+        --amber: #EE9B00;
+        --bg: #F8FAFC;
+        --card: rgba(255, 255, 255, 0.9);
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      }
+      body {
+        background: linear-gradient(180deg, #F1F5F9 0%, #E2E8F0 100%);
+        color: #0F172A;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        padding: env(safe-area-inset-top, 16px) 16px env(safe-area-inset-bottom, 16px) 16px;
+      }
+      .wrapper {
+        max-width: 640px;
+        width: 100%;
+        margin: 0 auto;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+      .card {
+        background: var(--card);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.8);
+        border-radius: 28px;
+        padding: 28px;
+        box-shadow: 0 20px 40px -15px rgba(0, 95, 115, 0.2);
+        margin: 20px 0;
+      }
+      .header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+      .logo {
+        width: 60px;
+        height: 60px;
+        background: var(--teal-primary);
+        border-radius: 0;
+        overflow: hidden;
+        border: 2px solid rgba(255, 255, 255, 0.6);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      .logo img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      h1 {
+        font-size: 1.25rem;
+        font-weight: 900;
+        letter-spacing: -0.02em;
+        color: #0F172A;
+      }
+      .subhead {
+        font-size: 0.8rem;
+        color: var(--teal-primary);
+        font-weight: 700;
+        margin-top: 2px;
+      }
+      .pill {
+        display: inline-block;
+        font-size: 0.65rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        padding: 2px 8px;
+        border-radius: 9999px;
+        background: #CCFBF1;
+        color: #0F766E;
+        margin-top: 6px;
+      }
+      .gas-box {
+        background: #F0FDFA;
+        border: 1px solid #99F6E4;
+        border-radius: 18px;
+        padding: 16px;
+        margin-bottom: 20px;
+      }
+      .label {
+        font-size: 0.75rem;
+        font-weight: 800;
+        color: #0F766E;
+        display: block;
+        margin-bottom: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      input[type="url"] {
+        width: 100%;
+        padding: 12px 14px;
+        border: 1px solid #CBD5E1;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        font-family: ui-monospace, Menlo, Consolas, monospace;
+        background: white;
+        color: #0F172A;
+        outline: none;
+        transition: border-color 0.2s;
+      }
+      input[type="url"]:focus {
+        border-color: var(--teal-primary);
+        box-shadow: 0 0 0 3px rgba(0, 95, 115, 0.15);
+      }
+      .btn-primary {
+        width: 100%;
+        background: linear-gradient(135deg, var(--teal-primary) 0%, var(--teal-deep) 100%);
+        color: white;
+        border: none;
+        padding: 14px 20px;
+        border-radius: 16px;
+        font-size: 0.95rem;
+        font-weight: 800;
+        cursor: pointer;
+        transition: all 0.2s;
+        box-shadow: 0 4px 14px rgba(0, 95, 115, 0.3);
+        margin-top: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        text-decoration: none;
+      }
+      .btn-primary:active {
+        transform: scale(0.98);
+      }
+      .btn-secondary {
+        width: 100%;
+        background: white;
+        color: #334155;
+        border: 1px solid #CBD5E1;
+        padding: 12px 18px;
+        border-radius: 14px;
+        font-size: 0.85rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s;
+        margin-top: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+      .status-box {
+        margin-top: 12px;
+        padding: 10px 14px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        display: none;
+      }
+      .status-success {
+        background: #DCFCE7;
+        color: #166534;
+        border: 1px solid #86EFAC;
+        display: block;
+      }
+      .status-error {
+        background: #FEE2E2;
+        color: #991B1B;
+        border: 1px solid #FCA5A5;
+        display: block;
+      }
+      .features {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-top: 20px;
+      }
+      .feat-item {
+        background: white;
+        border: 1px solid #E2E8F0;
+        border-radius: 14px;
+        padding: 12px;
+        font-size: 0.75rem;
+      }
+      .feat-title {
+        font-weight: 800;
+        color: #0F172A;
+      }
+      .feat-desc {
+        color: #64748B;
+        margin-top: 2px;
+      }
+      footer {
+        text-align: center;
+        font-size: 0.75rem;
+        color: #64748B;
+        padding: 16px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrapper">
+      <div class="card">
+        <div class="header">
+          <div class="logo">
+            <img src="./assets/aistudio/logo_4a66d5a3.png" alt="TWC Labs" />
+          </div>
+          <div>
+            <h1>TWC Labs Outreach PWA</h1>
+            <div class="subhead">Community Health Screening System</div>
+            <span class="pill">NDPA 2023 &bull; NDHA Compliant</span>
+          </div>
+        </div>
+
+        <div class="gas-box">
+          <label class="label" for="gasUrl">Google Apps Script Web App Backend URL</label>
+          <input
+            type="url"
+            id="gasUrl"
+            placeholder="https://script.google.com/macros/s/AKfycbx.../exec"
+            value=""
+          />
+          <div id="statusMessage" class="status-box"></div>
+          
+          <button type="button" class="btn-secondary" onclick="testGasConnection()">
+            Test Apps Script Ping
+          </button>
+        </div>
+
+        <a href="./index.html" class="btn-primary" id="launchBtn">
+          Launch Outreach Application &rarr;
+        </a>
+
+        <div class="features">
+          <div class="feat-item">
+            <div class="feat-title">Offline First</div>
+            <div class="feat-desc">Local IndexedDB &amp; AES-GCM-256 encryption.</div>
+          </div>
+          <div class="feat-item">
+            <div class="feat-title">Google Sheets Sync</div>
+            <div class="feat-desc">Zero server fee cloud persistence via GAS.</div>
+          </div>
+          <div class="feat-item">
+            <div class="feat-title">Multi-Hospital</div>
+            <div class="feat-desc">LUTH, FMC-EB, UPTH, National Hospital.</div>
+          </div>
+          <div class="feat-item">
+            <div class="feat-title">Mobile Ergonomics</div>
+            <div class="feat-desc">iOS Glassmorphism &amp; standalone PWA mode.</div>
+          </div>
+        </div>
+      </div>
+
+      <footer>
+        &copy; 2026 TWC Labs Community Outreach System. Deployed for GitHub Pages &amp; Google Apps Script.
+      </footer>
+    </div>
+
+    <script>
+      // Register Service Worker for GitHub Pages offline caching
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('./sw.js').then(function(reg) {
+            console.log('TWC Outreach Service Worker registered:', reg.scope);
+          }).catch(function(err) {
+            console.warn('Service Worker registration skipped:', err);
+          });
+        });
+      }
+
+      // Load saved GAS URL from localStorage
+      var savedUrl = localStorage.getItem('twc_gas_webapp_url');
+      if (savedUrl) {
+        document.getElementById('gasUrl').value = savedUrl;
+      }
+
+      function testGasConnection() {
+        var input = document.getElementById('gasUrl');
+        var status = document.getElementById('statusMessage');
+        var url = input.value.trim();
+
+        if (!url) {
+          status.className = 'status-box status-error';
+          status.innerText = 'Please enter a valid Google Apps Script Web App URL.';
+          return;
+        }
+
+        localStorage.setItem('twc_gas_webapp_url', url);
+        status.className = 'status-box';
+        status.style.display = 'block';
+        status.style.background = '#EFF6FF';
+        status.style.color = '#1E40AF';
+        status.innerText = 'Testing connection to Google Apps Script...';
+
+        var testEndpoint = url.includes('?') ? url + '&action=health' : url + '?action=health';
+
+        fetch(testEndpoint)
+          .then(function(res) { return res.json(); })
+          .then(function(data) {
+            if (data.status === 'ok') {
+              status.className = 'status-box status-success';
+              status.innerText = 'Connected! ' + data.service + ' (v' + (data.version || '2.4.0') + ')';
+            } else {
+              status.className = 'status-box status-error';
+              status.innerText = 'Response received with error: ' + (data.message || 'Unknown');
+            }
+          })
+          .catch(function(err) {
+            status.className = 'status-box status-error';
+            status.innerText = 'Connection check: ' + err.message + ' (Check deployment permissions are set to Anyone)';
+          });
+      }
+    </script>
+  </body>
+</html>
