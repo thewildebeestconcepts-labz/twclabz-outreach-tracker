@@ -1,114 +1,131 @@
 /**
- * TWC Labs Community Health Outreach PWA - Offline Service Worker
- * Designed for GitHub Pages and offline-first community field screening.
- * Provides resilient precaching, runtime asset caching, and offline fallback.
+ * Copyright 2018 Google Inc. All Rights Reserved.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
-const CACHE_NAME = 'twc-outreach-v2.4.0';
-const PRECACHE_ASSETS = [
-  './',
-  './index.html',
-  './manifest.json',
-  './favicon.png',
-  './apple-touch-icon.png',
-  './pwa-192x192.png',
-  './pwa-512x512.png',
-  './assets/aistudio/logo_4a66d5a3.png'
-];
+// If the loader is already loaded, just stop.
+if (!self.define) {
+  let registry = {};
 
-// Install: Cache core application shell
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(PRECACHE_ASSETS).catch((err) => {
-        console.warn('Pre-cache asset warning:', err);
-      });
-    }).then(() => self.skipWaiting())
-  );
-});
+  // Used for `eval` and `importScripts` where we can't get script URL by other means.
+  // In both cases, it's safe to use a global var because those functions are synchronous.
+  let nextDefineUri;
 
-// Activate: Clean up outdated cache versions
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            return caches.delete(key);
+  const singleRequire = (uri, parentUri) => {
+    uri = new URL(uri + ".js", parentUri).href;
+    return registry[uri] || (
+      
+        new Promise(resolve => {
+          if ("document" in self) {
+            const script = document.createElement("script");
+            script.src = uri;
+            script.onload = resolve;
+            document.head.appendChild(script);
+          } else {
+            nextDefineUri = uri;
+            importScripts(uri);
+            resolve();
           }
         })
-      );
-    }).then(() => self.clients.claim())
-  );
-});
-
-// Fetch: Strategy based on request type
-self.addEventListener('fetch', (event) => {
-  const request = event.request;
-  const url = new URL(request.url);
-
-  // Skip non-GET requests or Google Apps Script API calls (handled via offline sync queue)
-  if (request.method !== 'GET' || url.hostname.includes('script.google.com')) {
-    return;
-  }
-
-  // Strategy 1: Stale-While-Revalidate for images, icons & assets
-  if (
-    request.destination === 'image' ||
-    request.destination === 'font' ||
-    url.pathname.includes('/assets/') ||
-    url.pathname.endsWith('.png') ||
-    url.pathname.endsWith('.svg') ||
-    url.pathname.endsWith('.css')
-  ) {
-    event.respondWith(
-      caches.match(request).then((cachedResponse) => {
-        const fetchPromise = fetch(request).then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
-            const responseToCache = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, responseToCache);
-            });
-          }
-          return networkResponse;
-        }).catch(() => cachedResponse);
-
-        return cachedResponse || fetchPromise;
+      
+      .then(() => {
+        let promise = registry[uri];
+        if (!promise) {
+          throw new Error(`Module ${uri} didn’t register its module`);
+        }
+        return promise;
       })
     );
-    return;
-  }
+  };
 
-  // Strategy 2: Network-First with Cache Fallback for HTML Documents
-  event.respondWith(
-    fetch(request)
-      .then((networkResponse) => {
-        if (networkResponse && networkResponse.status === 200) {
-          const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, responseToCache);
-          });
-        }
-        return networkResponse;
-      })
-      .catch(() => {
-        return caches.match(request).then((cachedResponse) => {
-          if (cachedResponse) return cachedResponse;
-          if (request.mode === 'navigate') {
-            return caches.match('./') || caches.match('./index.html');
-          }
-          return new Response('Offline mode — TWC Labs Outreach PWA', {
-            status: 503,
-            statusText: 'Service Unavailable',
-            headers: new Headers({ 'Content-Type': 'text/plain' })
-          });
-        });
-      })
-  );
-});
+  self.define = (depsNames, factory) => {
+    const uri = nextDefineUri || ("document" in self ? document.currentScript.src : "") || location.href;
+    if (registry[uri]) {
+      // Module is already loading or loaded.
+      return;
+    }
+    let exports = {};
+    const require = depUri => singleRequire(depUri, uri);
+    const specialDeps = {
+      module: { uri },
+      exports,
+      require
+    };
+    registry[uri] = Promise.all(depsNames.map(
+      depName => specialDeps[depName] || require(depName)
+    )).then(deps => {
+      factory(...deps);
+      return exports;
+    });
+  };
+}
+define(['./workbox-7e5eb42b'], (function (workbox) { 'use strict';
 
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
-});
+  self.skipWaiting();
+  workbox.clientsClaim();
+  /**
+   * The precacheAndRoute() method efficiently caches and responds to
+   * requests for URLs in the manifest.
+   * See https://goo.gl/S9QRab
+   */
+  workbox.precacheAndRoute([{
+    "url": "registerSW.js",
+    "revision": "402b66900e731ca748771b6fc5e7a068"
+  }, {
+    "url": "pwa-512x512.png",
+    "revision": "c56c09cce4d91186c958a15fb7ffcfbb"
+  }, {
+    "url": "pwa-192x192.png",
+    "revision": "c56c09cce4d91186c958a15fb7ffcfbb"
+  }, {
+    "url": "index.html",
+    "revision": "6078693bac0c2b8dd993aba5d0b4ad2b"
+  }, {
+    "url": "github-pages-index.html",
+    "revision": "60059e26af97890ee58efc768b598a9c"
+  }, {
+    "url": "gas-index.html",
+    "revision": "0afb1edbbb9956406c8378a39836b76c"
+  }, {
+    "url": "favicon.png",
+    "revision": "c56c09cce4d91186c958a15fb7ffcfbb"
+  }, {
+    "url": "apple-touch-icon.png",
+    "revision": "c56c09cce4d91186c958a15fb7ffcfbb"
+  }, {
+    "url": "assets/index-vV2APnwt.js",
+    "revision": null
+  }, {
+    "url": "assets/index-CocoK4Yf.css",
+    "revision": null
+  }, {
+    "url": "assets/aistudio/logo_4a66d5a3.png",
+    "revision": null
+  }, {
+    "url": "apple-touch-icon.png",
+    "revision": "c56c09cce4d91186c958a15fb7ffcfbb"
+  }, {
+    "url": "favicon.png",
+    "revision": "c56c09cce4d91186c958a15fb7ffcfbb"
+  }, {
+    "url": "pwa-192x192.png",
+    "revision": "c56c09cce4d91186c958a15fb7ffcfbb"
+  }, {
+    "url": "pwa-512x512.png",
+    "revision": "c56c09cce4d91186c958a15fb7ffcfbb"
+  }, {
+    "url": "manifest.webmanifest",
+    "revision": "c37919650810c876e7c0723cc5b1cdd9"
+  }], {});
+  workbox.cleanupOutdatedCaches();
+  workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("index.html")));
+
+}));
