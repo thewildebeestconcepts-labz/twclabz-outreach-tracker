@@ -246,7 +246,7 @@
           <input
             type="url"
             id="gasUrl"
-            placeholder="https://script.google.com/macros/s/AKfycbxHPLQtcNpJozmuQSSUTnVN642hF3MHIxkJlq8obF_xBHuu7-VtRRWYpT49Gr_2cN96/exec"
+            placeholder="https://script.google.com/macros/s/AKfycbx.../exec"
             value=""
           />
           <div id="statusMessage" class="status-box"></div>
@@ -256,9 +256,9 @@
           </button>
         </div>
 
-        <a href="./index.html" class="btn-primary" id="launchBtn">
+        <button type="button" class="btn-primary" id="launchBtn" onclick="launchApp(event)">
           Launch Outreach Application &rarr;
-        </a>
+        </button>
 
         <div class="features">
           <div class="feat-item">
@@ -286,7 +286,6 @@
     </div>
 
     <script>
-      // Register Service Worker for GitHub Pages offline caching
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
           navigator.serviceWorker.register('./sw.js').then(function(reg) {
@@ -297,7 +296,6 @@
         });
       }
 
-      // Load saved GAS URL from localStorage
       var savedUrl = localStorage.getItem('twc_gas_webapp_url');
       if (savedUrl) {
         document.getElementById('gasUrl').value = savedUrl;
@@ -338,6 +336,20 @@
             status.className = 'status-box status-error';
             status.innerText = 'Connection check: ' + err.message + ' (Check deployment permissions are set to Anyone)';
           });
+      }
+
+      function launchApp(e) {
+        if (e && e.preventDefault) e.preventDefault();
+        var url = document.getElementById('gasUrl').value.trim();
+        if (url) {
+          localStorage.setItem('twc_gas_webapp_url', url);
+          try {
+            var cfg = JSON.parse(localStorage.getItem('twc_gas_config') || '{}');
+            cfg.webAppUrl = url;
+            localStorage.setItem('twc_gas_config', JSON.stringify(cfg));
+          } catch (err) {}
+        }
+        window.location.href = './index.html';
       }
     </script>
   </body>
